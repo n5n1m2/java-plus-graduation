@@ -63,18 +63,12 @@ public class PublicEventsController {
         List<EventShortDto> eventShorts = eventService.findEvents(param);
 
         log.info("HIT request \"GET /events\" to statsService with params: {}", param);
-        try {
             statClient.hit(new StatisticDto(
                     "main-service",
                     request.getRequestURI(),
                     request.getRemoteAddr(),
                     LocalDateTime.now())
             );
-        } catch (Exception e) {
-            return new ArrayList<>();
-        }
-
-
         return eventShorts;
     }
 }
