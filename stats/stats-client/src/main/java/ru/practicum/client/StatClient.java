@@ -40,6 +40,7 @@ public class StatClient {
                             throw new StatisticClientException("Statistics service error: " + response.getStatusText());
                         })
                 .build();
+        initialized = true;
     }
 
     public void hit(StatisticDto statisticDto) {
