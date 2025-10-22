@@ -32,8 +32,9 @@ public class StatClient {
     }
 
     private void init() throws ServiceNotFoundException {
+        var instance = getInstance();
         this.restClient = RestClient.builder()
-                .baseUrl("http://stats-server:" + getInstance().getPort())
+                .baseUrl("http://" + instance.getHost() + ":" + instance.getPort())
                 .defaultStatusHandler(
                         HttpStatusCode::isError,
                         (request, response) -> {
