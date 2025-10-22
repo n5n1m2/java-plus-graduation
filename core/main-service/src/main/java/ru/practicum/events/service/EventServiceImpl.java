@@ -108,13 +108,7 @@ public class EventServiceImpl implements EventService {
         if (param.getFrom() > param.getSize()) {
             return List.of();
         }
-        PageRequest pageRequest;
-        try {
-              pageRequest = PageRequest.of(param.getFrom() / param.getSize(), param.getSize());
-        } catch (Exception e) {
-            return List.of();
-        }
-
+        PageRequest pageRequest = PageRequest.of(param.getFrom() / param.getSize(), param.getSize());
         List<Event> events = eventRepository.findEventsByParam(param, pageRequest);
         return mapToFullDto(events);
     }
