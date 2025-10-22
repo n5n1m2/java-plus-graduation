@@ -86,9 +86,6 @@ public class StatClient {
     private ServiceInstance getInstance() throws ServiceNotFoundException {
         String statsServiceId = "stats-server";
         try {
-            if (!initialized) {
-                init();
-            }
             return discoveryClient
                     .getInstances(statsServiceId)
                     .getFirst();
