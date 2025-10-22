@@ -28,3 +28,7 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBined: TRACE
 
 STATS_SERVER_URL: http://localhost:9090
+
+server:
+  error:
+    include-message: always
