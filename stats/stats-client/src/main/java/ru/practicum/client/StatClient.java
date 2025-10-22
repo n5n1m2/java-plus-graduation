@@ -1,8 +1,10 @@
 package ru.practicum.client;
 
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,7 @@ import ru.practicum.client.exception.StatisticClientException;
 import ru.practicum.dto.in.StatisticDto;
 import ru.practicum.dto.output.GetStatisticDto;
 
+import javax.management.ServiceNotFoundException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -19,12 +22,18 @@ import java.util.List;
 @Component
 @Slf4j
 public class StatClient {
-    private final RestClient restClient;
+    private final DiscoveryClient discoveryClient;
+    private RestClient restClient;
 
     @Autowired
-    public StatClient(@Value("${STATS_SERVER_URL}") String statsUrl) {
+    public StatClient(DiscoveryClient discoveryClient) {
+        this.discoveryClient = discoveryClient;
+    }
+
+    @PostConstruct
+    private void init() throws ServiceNotFoundException {
         this.restClient = RestClient.builder()
-                .baseUrl(statsUrl)
+                .baseUrl("http://stats-server:" + getInstance().getPort())
                 .defaultStatusHandler(
                         HttpStatusCode::isError,
                         (request, response) -> {
@@ -65,6 +74,20 @@ public class StatClient {
         } catch (Exception e) {
             log.error("Error retrieving statistics from client: {}", e.getMessage());
             throw new StatisticClientException("Error getting statistics", e);
+        }
+    }
+
+    private ServiceInstance getInstance() throws ServiceNotFoundException {
+        String statsServiceId = "stats-server";
+        try {
+            return discoveryClient
+                    .getInstances(statsServiceId)
+                    .getFirst();
+        } catch (Exception exception) {
+            throw new ServiceNotFoundException(
+                    "Ошибка обнаружения адреса сервиса статистики с id: " + statsServiceId +
+                            " trace: " + exception.getMessage()
+            );
         }
     }
 }
