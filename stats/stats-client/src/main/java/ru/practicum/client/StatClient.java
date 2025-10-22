@@ -15,6 +15,7 @@ import ru.practicum.dto.output.GetStatisticDto;
 import javax.management.ServiceNotFoundException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -79,7 +80,7 @@ public class StatClient {
                     });
         } catch (Exception e) {
             log.error("Error retrieving statistics from client: {}", e.getMessage());
-            throw new StatisticClientException("Error getting statistics", e);
+            throw new StatisticClientException("Error getting statistics: " + e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()), e);
         }
     }
 
