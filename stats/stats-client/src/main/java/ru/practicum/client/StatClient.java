@@ -24,13 +24,13 @@ import java.util.List;
 public class StatClient {
     private final DiscoveryClient discoveryClient;
     private RestClient restClient;
+    private boolean initialized = false;
 
     @Autowired
     public StatClient(DiscoveryClient discoveryClient) {
         this.discoveryClient = discoveryClient;
     }
 
-    @PostConstruct
     private void init() throws ServiceNotFoundException {
         this.restClient = RestClient.builder()
                 .baseUrl("http://stats-server:" + getInstance().getPort())
@@ -44,6 +44,9 @@ public class StatClient {
 
     public void hit(StatisticDto statisticDto) {
         try {
+            if (!initialized) {
+                init();
+            }
             log.info("Sending statistics hit request to client");
             restClient.post()
                     .uri("/hit")
@@ -59,6 +62,9 @@ public class StatClient {
     public List<GetStatisticDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, boolean unique) {
         DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         try {
+            if (!initialized) {
+                init();
+            }
             log.info("Requesting statistics from client");
             return restClient
                     .get()
@@ -80,6 +86,9 @@ public class StatClient {
     private ServiceInstance getInstance() throws ServiceNotFoundException {
         String statsServiceId = "stats-server";
         try {
+            if (!initialized) {
+                init();
+            }
             return discoveryClient
                     .getInstances(statsServiceId)
                     .getFirst();
