@@ -1,4 +1,55 @@
 services:
+  discovery-server:
+    build:
+      context: ./infra/discovery-server
+      dockerfile: Dockerfile
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: "curl --fail --silent discovery-server:8761/actuator/health | grep UP || exit 1"
+      timeout: 5s
+      interval: 20s
+      retries: 5
+    networks:
+      - app-network
+
+  config-server:
+    build:
+      context: ./infra/config-server
+      dockerfile: Dockerfile
+    container_name: config-server
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SERVER_PORT=9091
+    healthcheck:
+      test: "curl --fail --silent config-server:9091/actuator/health | grep UP || exit 1"
+      timeout: 5s
+      interval: 30s
+      retries: 5
+    networks:
+      - app-network
+
+  gateway-server:
+    build:
+      context: ./infra/gateway-server
+      dockerfile: Dockerfile
+    container_name: gateway-server
+    ports:
+      - "8080:8080"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      ewm-service:
+        condition: service_healthy
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
+
   stats-server:
     build: ./stats/stats-server
     image: stats-server
@@ -6,12 +57,22 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - stats-db
+      config-server:
+        condition: service_healthy
+      stats-db:
+        condition: service_started
+    healthcheck:
+      test: "curl --fail --silent config-server:9091/actuator/health | grep UP || exit 1"
+      timeout: 5s
+      interval: 30s
+      retries: 5
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
       - SPRING_DATASOURCE_USERNAME=stats
       - SPRING_DATASOURCE_PASSWORD=1234
-      - STATS_SERVER_URL=http://stats-server:9090
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    networks:
+      - app-network
 
   stats-db:
     image: postgres:16.1
@@ -27,21 +88,33 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - app-network
 
   ewm-service:
-    build: ./main-service
+    build: ./core/main-service
     image: main-service
     container_name: ewm-service
-    ports:
-      - "8080:8080"
     depends_on:
-      - ewm-db
-      - stats-server
+      config-server:
+        condition: service_healthy
+      stats-server:
+        condition: service_started
+      ewm-db:
+        condition: service_started
+    healthcheck:
+      test: "curl --fail --silent config-server:9091/actuator/health | grep UP || exit 1"
+      timeout: 5s
+      interval: 30s
+      retries: 5
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
       - SPRING_DATASOURCE_USERNAME=ewm
       - SPRING_DATASOURCE_PASSWORD=1234
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
       - STATS_SERVER_URL=http://stats-server:9090
+    networks:
+      - app-network
 
   ewm-db:
     image: postgres:16.1
@@ -57,3 +130,10 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: java-plus-network
+    driver: bridge

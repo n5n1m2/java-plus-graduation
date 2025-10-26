@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.client.StatClient;
@@ -17,6 +18,7 @@ import ru.practicum.events.model.EventPublicParam;
 import ru.practicum.events.service.EventService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -55,19 +57,17 @@ public class PublicEventsController {
             @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
             @RequestParam(defaultValue = "10") @Positive Integer size,
             HttpServletRequest request) {
-
         EventPublicParam param = new EventPublicParam(
                 text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
         List<EventShortDto> eventShorts = eventService.findEvents(param);
 
         log.info("HIT request \"GET /events\" to statsService with params: {}", param);
-        statClient.hit(new StatisticDto(
-                "main-service",
-                request.getRequestURI(),
-                request.getRemoteAddr(),
-                LocalDateTime.now())
-        );
-
+            statClient.hit(new StatisticDto(
+                    "main-service",
+                    request.getRequestURI(),
+                    request.getRemoteAddr(),
+                    LocalDateTime.now())
+            );
         return eventShorts;
     }
 }
